@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Card Game #2!</title>
+  <link rel="stylesheet" type="text/css" href="default2.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js" charset="utf-8"></script>
+  <script src="card.js" charset="utf-8"></script>
+  <script>
+    //deactivated nextRoundBttn for final line 137 & 138
+    130-153
+
+    var deck = new Deck();
+
+    //Player class, has ability to sort its deck
+    function Player() {
+      this.pDeck = [];
+      this.count = 0;
+      this.wins = 0;
+      this.sortDeck = function()
+      {
+        for(i=0; i<this.pDeck.length-1; i++)
+        {
+          min = i;
+          for(k=i+1; k<this.pDeck.length; k++)
+          {
+            if(this.pDeck[k].face < this.pDeck[min].face)
+            {
+              min = k
+            }
+          }
+          var temp = this.pDeck[min];
+          this.pDeck[min] = this.pDeck[i];
+          this.pDeck[i] = temp;
+        }
+      }
+    }
+
+    //to initialize the game beginning the webpage
+    player1 = new Player();
+    player2 = new Player();
+    var tieBreaker = ["Hearts", "Clubs", "Diamonds", "Spades"];
+    var toDiscard = []
+    $(document).ready(function() {
+      nextRound();
+      $("#score1").html(player1.wins);
+      $("#score2").html(player2.wins);
+    });
+
+    //sets up for the next round, creating a new deck and dealing 5 cards per player
+    function nextRound() {
+      player1.pDeck = [];
+      player2.pDeck = [];
+      toDiscard = [];
+
+      //just technical stuff
+      $("#nextRoundBttn").css("opacity","0.3");
+      $("#discardBttn").css("opacity","1");
+      $("#revealBttn").css("opacity","1");
+      $("#revealBttn").attr("onClick","revealWinner()");
+      $("#p1Space").css("background", "#133337");
+      $("#p2Space").css("background", "#133337");
+      $(".p1Card").css("border","");
+
+      //deals
+      for (i = 0; i < 5; i++) {
+        player1.pDeck.push(deck.deal());
+      }
+      for (i = 0; i < 5; i++) {
+        player2.pDeck.push(deck.deal());
+      }
+      $("#discardBttn").attr("onClick", "discardClick()");
+
+      for (i = 0; i < player2.pDeck.length; i++) {
+        index = "#b" + i;
+        $(index).attr("src", "Deck/Gray_back.jpg");
+      }
+      // $("#score1").html(player1.wins);
+      // $("#score2").html(player2.wins);
+      refreshCards("p1")
+    }
+
+    //makes sure the cards shown in the window are up-to-date
+    function refreshCards(p) {
+      if (p == "p1") {
+        for (i = 0; i < player1.pDeck.length; i++) {
+          p = "#" + i;
+          var nextCard1 = player1.pDeck[i];
+          $(String(p)).attr('src', nextCard1.icon);
+        }
+      } else if (p == "p2") {
+        for (i = 0; i < player2.pDeck.length; i++) {
+          index = "#b" + i;
+          $(index).attr("src", player2.pDeck[i].icon);
+        }
+      } else if (p == "p1p2") {
+        for (i = 0; i < player1.pDeck.length; i++) {
+          index = "#" + i;
+          $(index).attr("src", player1.pDeck[i].icon);
+        }
+        for (i = 0; i < player2.pDeck.length; i++) {
+          index = "#b" + i;
+          $(index).attr("src", player2.pDeck[i].icon);
+        }
+      }
+    }
+
+    //This section allows you to select the cards of player1 that you want to discard
+    $(document).ready(function() {
+      $(".p1Card").click(function() {
+        if (toDiscard.indexOf(player1.pDeck[$(this).attr('id')]) == -1) {
+          $(this).css("border", "4px solid blue");
+          toDiscard.push(player1.pDeck[$(this).attr('id')]);
+        }
+      });
+      $(".p1Card").dblclick(function() {
+        $(this).css("border", "");
+        toDiscard.splice(toDiscard.indexOf(player1.pDeck[$(this).attr('id')]), 1);
+      });
+    });
+
+    //function takes care of removing unwanted cards and dealing new ones
+    function discardClick() {
+      for (i = 0; i < toDiscard.length; i++) {
+        index = player1.pDeck.indexOf(toDiscard[i]);
+        player1.pDeck[index] = deck.deal();
+      }
+      $("#discardBttn").attr("onClick", "");
+      $("#discardBttn").css("opacity", "0.3");
+      $(".p1Card").css("border", "");
+      refreshCards("p1");
+    }
+
+    //calls the appropriate functions to reveal the winner
+    function revealWinner()
+    {
+      $("#nextRoundBttn").attr("onClick","nextRound()");
+      $("#nextRoundBttn").css("opacity","1");
+      $("#revealBttn").css("opacity","0.3");
+      $("#revealBttn").attr("onClick","");
+      $(".p1Card").css("border","");
+      p1val = 0;
+      p1count = 0;
+      player1.sortDeck();
+      player2.sortDeck();
+
+      refreshCards("p2");
+      var time = 2000
+      setTimeout(function () {
+        determineWinner();
+        $("#score1").html(player1.wins);
+        $("#score2").html(player2.wins);
+      }, 1000);
+    }
+
+    //function will use all the poker rule functions below to determine the winner
+    // set range from 1-10, 10 being a royal flush and 1 being high card
+    function determineWinner()
+    {
+      var p1Final = calculateScore(player1.pDeck);
+      var p2Final = calculateScore(player2.pDeck);
+      if(p1Final[0]>p2Final[0])
+      {
+        $("#p1Space").css("background", "green");
+        player1.wins++;
+        alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+        return;
+      }
+      else if(p1Final[0]<p2Final[0])
+      {
+        player2.wins++;
+        $("#p2Space").css("background", "green");
+        alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+        return;
+      }
+      else if(p1Final[0]==p2Final[0])
+      {
+        if(p1Final[2] == "face")
+        {
+          if(p1Final[3] > p2Final[3])
+          {
+            $("#p1Space").css("background", "green");
+            player1.wins++;
+            alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+            return;
+          }
+          else if(p1Final[3] < p2Final[3])
+          {
+            player2.wins++;
+            $("#p2Space").css("background", "green");
+            alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+            return;
+          }
+        }
+        else if(p1Final[2] == "suit")
+        {
+          if(tieBreaker.indexOf(p1Final[3]) > tieBreaker.indexOf(p2Final[3]))
+          {
+            $("#p1Space").css("background", "green");
+            player1.wins++;
+            alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+            return;
+          }
+          else if(tieBreaker.indexOf(p1Final[3]) < tieBreaker.indexOf(p2Final[3]))
+          {
+            player2.wins++;
+            $("#p2Space").css("background", "green");
+            alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+            return;
+          }
+        }
+        else if(p1Final[2] == "both")
+        {
+          if(p1Final[3] > p2Final[3])
+          {
+            $("#p1Space").css("background", "green");
+            player1.wins++;
+            alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+            return;
+          }
+          else if(p1Final[3] < p2Final[3])
+          {
+            player2.wins++;
+            $("#p2Space").css("background", "green");
+            alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+            return;
+          }
+          else if(p1Final[3] == p2Final[3])
+          {
+            if(tieBreaker.indexOf(p1Final[4]) > tieBreaker.indexOf(p2Final[4]))
+            {
+              $("#p1Space").css("background", "green");
+              player1.wins++;
+              alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+              return;
+            }
+            else if(tieBreaker.indexOf(p1Final[4]) < tieBreaker.indexOf(p2Final[4]))
+            {
+              player2.wins++;
+              $("#p2Space").css("background", "green");
+              alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+              return;
+            }
+          }
+        }
+        else if(p1Final[2] == "three")
+        {
+          if(p1Final[3] > p2Final[3])
+          {
+            $("#p1Space").css("background", "green");
+            player1.wins++;
+            alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+            return;
+          }
+          else if(p1Final[3] < p2Final[3])
+          {
+            player2.wins++;
+            $("#p2Space").css("background", "green");
+            alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+            return;
+          }
+          else if(p1Final[3] == p2Final[3])
+          {
+            if(p1Final[4] > p2Final[4])
+            {
+              $("#p1Space").css("background", "green");
+              player1.wins++;
+              alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+              return;
+            }
+            else if(p1Final[4] < p2Final[4])
+            {
+              player2.wins++;
+              $("#p2Space").css("background", "green");
+              alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+              return;
+            }
+            else if(p1Final[4] == p2Final[4])
+            {
+              if(tieBreaker.indexOf(p1Final[5]) > tieBreaker.indexOf(p2Final[5]))
+              {
+                $("#p1Space").css("background", "green");
+                player1.wins++;
+                alert("Congratulations Player 1!!!!\nYour " + p1Final[1] + " beat the opponent's " + p2Final[1]);
+                return;
+              }
+              else if(tieBreaker.indexOf(p1Final[5]) < tieBreaker.indexOf(p2Final[5]))
+              {
+                player2.wins++;
+                $("#p2Space").css("background", "green");
+                alert("You Lost!!!!\nYour " + p1Final[1] + " lost against the opponent's " + p2Final[1]);
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    //will calculate the actual score of a sorted deck sent
+    function calculateScore(aDeck)
+    {
+      p1Final = [];
+      if(score = isRoyalFlush(aDeck))
+      {
+        p1Final.push(10);
+        p1Final.push("Royal Flush");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+      }
+      else if(score = isStraightFlush(aDeck))
+      {
+        p1Final.push(9);
+        p1Final.push("Straight Flush");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+      }
+      else if(score = isFourofaKind(aDeck))
+      {
+        p1Final.push(8);
+        p1Final.push("Four of a Kind");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+      }
+      else if(score = isFullHouse(aDeck))
+      {
+        p1Final.push(7);
+        p1Final.push("Full House");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+      }
+      else if(score = isFlush(aDeck))
+      {
+        p1Final.push(6);
+        p1Final.push("Flush");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+      }
+      else if(score = isStraight(aDeck))
+      {
+        p1Final.push(5);
+        p1Final.push("Straight");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+      }
+      else if(score = isThreeofaKind(aDeck))
+      {
+        p1Final.push(4);
+        p1Final.push("Three of a Kind");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+      }
+      else if(score = isTwoPair(aDeck))
+      {
+        p1Final.push(3);
+        p1Final.push("Two Pair");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+        p1Final.push(score[3]);
+        p1Final.push(score[4]);
+      }
+      else if(score = isPair(aDeck))
+      {
+        p1Final.push(2);
+        p1Final.push("Pair")
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+        p1Final.push(score[3]);
+      }
+      else if(score = highCard(aDeck))
+      {
+        p1Final.push(1);
+        p1Final.push("High Card");
+        p1Final.push(score[1]);
+        p1Final.push(score[2]);
+        p1Final.push(score[3]);
+      }
+      return p1Final;
+    }
+
+    //will check if deck has a Flush
+    function isFlush(aDeck)
+    {
+      suit = aDeck[0].suit;
+      for(i=1;i<aDeck.length;i++)
+      {
+        if(aDeck[i].suit != suit)
+        {
+          return false;
+        }
+      }
+      return [true,"suit",aDeck[0].suit];
+    }
+    //will check if deck has a straight, deck must be sorted
+    function isStraight(aDeck)
+    {
+      face = aDeck[0].face;
+      for(i=1;i<aDeck.length;i++)
+      {
+        face++;
+        if(aDeck[i].face != face)
+        {
+          return false;
+        }
+      }
+      return [true,"face", aDeck[0].face];
+    }
+    //must receive a sorted deck already, will disqualify if first card is not 10
+    function isRoyalFlush(aDeck)
+    {
+      suit = aDeck[0].face;
+      if(aDeck[0].face != 10)
+      {
+        return false;
+      }
+      if(!isStraight(aDeck)[0])
+      {
+        return false;
+      }
+      if(!isFlush(aDeck)[0])
+      {
+        return false;
+      }
+      return [true,"suit", aDeck[0].suit];
+    }
+    //will check if deck is straight flush, must be sorted Deck
+    function isStraightFlush(aDeck)
+    {
+      face = aDeck[0].face;
+      if(!isFlush(aDeck)[0])
+      {
+        return false;
+      }
+      if(!isStraight(aDeck)[0])
+      {
+        return false;
+      }
+      return [ture,"face", aDeck[0].face];
+    }
+    //will check if sorted deck is four of a kind
+    function isFourofaKind(aDeck)
+    {
+      if(aDeck[0].face==aDeck[1].face && aDeck[0].face==aDeck[2].face && aDeck[0].face==aDeck[3].face)
+      {
+        return [true,"face", aDeck[0].face];
+      }
+      else if(aDeck[1].face==aDeck[2].face && aDeck[1].face==aDeck[3].face && aDeck[1].face==aDeck[4].face)
+      {
+        return [true,"face", aDeck[1].face];
+      }
+      else {
+        return false;
+      }
+    }
+    //will check if deck has full house, must be sorted
+    function isFullHouse(aDeck)
+    {
+      if(aDeck[0].face==aDeck[1].face && aDeck[0].face==aDeck[2].face && aDeck[3].face == aDeck[4].face)
+      {
+        return [true,"face", aDeck[0].face];
+      }
+      else if(aDeck[2].face==aDeck[3].face && aDeck[2].face==aDeck[4].face && aDeck[0].face == aDeck[1].face)
+      {
+        return [true,"face", aDeck[2].face];
+      }
+      return false;
+    }
+    //will check if deck if three of a kind, must be sorted
+    function isThreeofaKind(aDeck)
+    {
+      if(aDeck[0].face==aDeck[1].face && aDeck[0].face==aDeck[2].face)
+      {
+        return [true,"face", aDeck[0].face];
+      }
+      else if(aDeck[1].face==aDeck[2].face && aDeck[1].face==aDeck[3].face)
+      {
+        return [true,"face", aDeck[1].face];
+      }
+      else if(aDeck[2].face==aDeck[3].face && aDeck[2].face==aDeck[4].face)
+      {
+        return [true,"face", aDeck[2].face];
+      }
+      return false;
+    }
+    //will check if deck has two pairs, must be sorted
+    function isTwoPair(aDeck)
+    {
+      if(aDeck[0].face == aDeck[1].face && aDeck[2].face == aDeck[3].face)
+      {
+        suit = "";
+        if(tieBreaker.indexOf(aDeck[2].suit)>tieBreaker.indexOf(aDeck[3].suit))
+        {
+          suit = aDeck[2].suit;
+        }
+        else if(tieBreaker.indexOf(aDeck[2].suit)<tieBreaker.indexOf(aDeck[3].suit))
+        {
+          suit = aDeck[3].suit;
+        }
+        return [true,"three", aDeck[2].face, aDeck[0].face, suit]
+      }
+      else if(aDeck[1].face == aDeck[2].face && aDeck[3].face == aDeck[4].face)
+      {
+        suit = "";
+        if(tieBreaker.indexOf(aDeck[3].suit)>tieBreaker.indexOf(aDeck[4].suit))
+        {
+          suit = aDeck[3].suit;
+        }
+        else if(tieBreaker.indexOf(aDeck[3].suit)<tieBreaker.indexOf(aDeck[4].suit))
+        {
+          suit = aDeck[4].suit;
+        }
+        return [true,"three", aDeck[3].face, aDeck[1].face, suit];
+      }
+      else if(aDeck[0].face == aDeck[1].face && aDeck[3].face == aDeck[4].face)
+      {
+        suit = "";
+        if(tieBreaker.indexOf(aDeck[3].suit)>tieBreaker.indexOf(aDeck[4].suit))
+        {
+          suit = aDeck[3].suit;
+        }
+        else if(tieBreaker.indexOf(aDeck[3].suit)<tieBreaker.indexOf(aDeck[4].suit))
+        {
+          suit = aDeck[4].suit;
+        }
+        return [true,"three", aDeck[3].face, aDeck[0].face, suit];
+      }
+      return false;
+    }
+    //will check if deck has a pair, must be sorted
+    function isPair(aDeck)
+    {
+      if(aDeck[0].face == aDeck[1].face)
+      {
+        suit = "";
+        if(tieBreaker.indexOf(aDeck[0].suit)>tieBreaker.indexOf(aDeck[1].suit))
+        {
+          suit = aDeck[0].suit;
+        }
+        else if(tieBreaker.indexOf(aDeck[0].suit)<tieBreaker.indexOf(aDeck[1].suit))
+        {
+          suit = aDeck[1].suit;
+        }
+        return [true,"both", aDeck[0].face, suit];
+      }
+      if(aDeck[1].face==aDeck[2].face)
+      {
+        suit = "";
+        if(tieBreaker.indexOf(aDeck[1].suit)>tieBreaker.indexOf(aDeck[2].suit))
+        {
+          suit = aDeck[1].suit;
+        }
+        else if(tieBreaker.indexOf(aDeck[1].suit)<tieBreaker.indexOf(aDeck[2].suit))
+        {
+          suit = aDeck[2].suit;
+        }
+        return [true,"both", aDeck[1].face, suit];
+      }
+      if(aDeck[2].face == aDeck[3].face)
+      {
+        suit = "";
+        if(tieBreaker.indexOf(aDeck[2].suit)>tieBreaker.indexOf(aDeck[3].suit))
+        {
+          suit = aDeck[2].suit;
+        }
+        else if(tieBreaker.indexOf(aDeck[2].suit)<tieBreaker.indexOf(aDeck[3].suit))
+        {
+          suit = aDeck[3].suit;
+        }
+        return [true,"both", aDeck[2].face, suit];
+      }
+      if(aDeck[3].face == aDeck[4].face)
+      {
+        suit = "";
+        if(tieBreaker.indexOf(aDeck[3].suit)>tieBreaker.indexOf(aDeck[4].suit))
+        {
+          suit = aDeck[3].suit;
+        }
+        else if(tieBreaker.indexOf(aDeck[3].suit)<tieBreaker.indexOf(aDeck[4].suit))
+        {
+          suit = aDeck[4].suit;
+        }
+        return [true,"both", aDeck[3].face, suit];
+      }
+      return false;
+    }
+    //will return true, and the highest card of the deck. Must be sorted
+    function highCard(aDeck)
+    {
+      return [true,"both", aDeck[4].face, aDeck[4].suit];
+    }
+  </script>
+</head>
+
+<body>
+  <h1>Stud Poker</h1>
+  <div style="text-align:left;margin-top:-36px;margin-left:10px;">
+    <button id="home" style="font-size:8pt;padding:5px 10px;text-align:right;">Home Page</button>
+  </div>
+  <div style="text-align:right;margin-top:-26px;margin-left:10px;">
+    <button id="home" style="font-size:8pt;padding:5px 10px;text-align:right;">Start New Game</button>
+  </div>
+  <br><br><br>
+  <div class="container">
+    <div class="">
+      <span class="span1" style="background:none;">Score Player 1: </span>
+      <span class="span2" id="score1"></span>
+    </div>
+    <div class="">
+      <span class="span1" style="background:none;">Score Player 2: </span>
+      <span class="span2" id="score2"></span>
+    </div>
+  </div>
+  <br><br><br>
+  <div class="container" id="p2Space" style="grid-template-columns: auto auto auto auto auto;">
+    <img src="Deck/Gray_back.jpg" id="b0">
+    <img src="Deck/Gray_back.jpg" id="b1">
+    <img src="Deck/Gray_back.jpg" id="b2">
+    <img src="Deck/Gray_back.jpg" id="b3">
+    <img src="Deck/Gray_back.jpg" id="b4">
+  </div>
+
+  <br><br><br>
+
+  <div class="container">
+    <button type="button" id="revealBttn">Reveal Winner</button>
+    <button type="button" id="nextRoundBttn" class="hoverElem">Next Round<span class="hoverText">Disabled for final</span></button>
+
+  </div>
+
+  <br><br><br>
+
+  <div class="container" id="p1Space" style="grid-template-columns: auto auto auto auto auto;">
+    <img src="" id="0" class="p1Card">
+    <img src="" id="1" class="p1Card">
+    <img src="" id="2" class="p1Card">
+    <img src="" id="3" class="p1Card">
+    <img src="" id="4" class="p1Card">
+  </div>
+
+  <br><br>
+  <p style="text-align:center">Click card once to select, double click to deselect</p>
+  <div style="text-align:center;">
+    <button type="button" id="discardBttn" onclick="discardClick()">Discard Selected Cards</button>
+  </div>
+</body>
+
+</html>
